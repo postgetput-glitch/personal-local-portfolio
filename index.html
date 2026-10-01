@@ -11,38 +11,57 @@
         .glass { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .btn-primary { background: #3b82f6; } .btn-primary:active { background: #2563eb; transform: scale(0.98); }
         .btn-success { background: #10b981; } .btn-success:active { background: #059669; transform: scale(0.98); }
-        .btn-danger { background: #ef4444; } .btn-danger:active { background: #dc2626; transform: scale(0.98); }
         input, select { background: #1e293b; border: 1px solid #334155; color: white; }
         input:focus { outline: none; border-color: #3b82f6; }
-        #startupModal { background: rgba(0,0,0,0.9); }
+        #startupModal, #exportWarningModal { background: rgba(0,0,0,0.85); }
         .fade-text { transition: opacity 0.5s ease-in-out; }
     </style>
 </head>
 <body class="min-h-screen p-3 md:p-6 pb-20">
 
-    <!-- STARTUP MODAL (Only shows if absolutely no saved data exists) -->
+    <!-- STARTUP MODAL -->
     <div id="startupModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="glass p-6 rounded-2xl max-w-sm w-full text-center space-y-5 shadow-2xl">
             <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             </div>
-            <h2 class="text-xl font-bold text-white">Welcome Back</h2>
-            <p class="text-gray-400 text-sm">No saved portfolio found. Start fresh or locate your CSV. <br><span class="text-blue-400 text-xs">(Your choice will be remembered permanently)</span></p>
-            
+            <h2 class="text-xl font-bold text-white">Welcome to Portfolio Tracker</h2>
+            <p class="text-gray-400 text-sm">Your data is saved securely in your browser. <br><span class="text-blue-400 text-xs">(Import an existing CSV or start fresh)</span></p>
             <div class="space-y-3 pt-2">
-                <button onclick="loadFile()" class="w-full btn-primary text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30">
+                <button onclick="importCSV()" class="w-full btn-primary text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    Locate Existing .CSV
+                    Import Existing .CSV
                 </button>
                 <div class="text-gray-600 text-xs font-medium uppercase tracking-wider">- or -</div>
-                <button onclick="startFresh()" class="w-full bg-slate-700 active:bg-slate-600 text-white py-3 rounded-xl font-semibold transition">
-                    Start as New User
-                </button>
+                <button onclick="startFresh()" class="w-full bg-slate-700 active:bg-slate-600 text-white py-3 rounded-xl font-semibold transition">Start as New User</button>
             </div>
         </div>
     </div>
 
-    <!-- HIDDEN FILE INPUT FOR FALLBACK -->
+    <!-- EXPORT WARNING MODAL (New!) -->
+    <div id="exportWarningModal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
+        <div class="glass p-6 rounded-2xl max-w-sm w-full text-center space-y-4 border border-orange-500/50 shadow-2xl shadow-orange-900/20">
+            <div class="w-14 h-14 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto">
+                <svg class="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-lg font-bold text-white">Backup Your Data!</h3>
+            <p class="text-sm text-gray-300 leading-relaxed">Your portfolio is saved in your browser memory, but <span class="text-orange-400 font-semibold">clearing your cache will delete it permanently</span>. <br><br>It is highly recommended to download a CSV backup.</p>
+            
+            <div class="flex flex-col gap-2 pt-2">
+                <button onclick="downloadAndClose()" class="w-full bg-orange-500 active:bg-orange-600 text-white py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-orange-900/30">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Download CSV Backup Now
+                </button>
+                <button onclick="closeWarning()" class="w-full bg-slate-700 active:bg-slate-600 text-gray-300 py-2.5 rounded-xl text-sm transition">I'll do it later</button>
+            </div>
+            
+            <label class="flex items-center gap-2 text-xs text-gray-400 justify-center mt-2 cursor-pointer">
+                <input type="checkbox" id="dontRemindCheck" class="w-4 h-4 accent-orange-500 rounded">
+                <span>Don't remind me again this session</span>
+            </label>
+        </div>
+    </div>
+
     <input type="file" id="fileInput" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
 
     <!-- HEADER -->
@@ -51,21 +70,19 @@
             <div>
                 <h1 class="text-xl md:text-2xl font-bold text-white">My Portfolio</h1>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <p class="text-xs text-gray-400 truncate max-w-[200px]" id="fileNameDisplay">Loading...</p>
+                    <p class="text-xs text-gray-400" id="fileNameDisplay">Saved in Browser Memory</p>
                     <span id="autoSaveIndicator" class="text-xs text-green-400 font-medium opacity-0 fade-text flex items-center gap-1">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        <span id="saveMsg">Auto-saved</span>
+                        Auto-saved
                     </span>
                 </div>
             </div>
-            <!-- Export Button (Visible if in LocalStorage mode) -->
-            <button id="exportBtn" onclick="exportCSV()" class="hidden text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition flex items-center gap-1">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                Export CSV
+            <button onclick="exportCSV()" class="text-xs bg-slate-700 active:bg-slate-600 text-white px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow-md">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Backup / Export CSV
             </button>
         </div>
         
-        <!-- Metrics Grid -->
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div class="glass px-4 py-3 rounded-xl">
                 <p class="text-gray-400 text-[10px] md:text-xs uppercase tracking-wider">Invested</p>
@@ -84,19 +101,15 @@
 
     <!-- MAIN GRID -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        
-        <!-- LEFT: Add Stock -->
         <div class="lg:col-span-1 space-y-4 md:space-y-6">
             <div class="glass p-4 md:p-5 rounded-xl space-y-4">
                 <h2 class="font-semibold text-base md:text-lg text-white flex items-center gap-2">
                     <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Add Investment
                 </h2>
-                
                 <div>
                     <label class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Ticker (e.g., DIVISLAB.NS)</label>
                     <input type="text" id="tickerInput" placeholder="DIVISLAB.NS" class="w-full mt-1 px-3 py-2.5 rounded-lg text-sm md:text-base">
                 </div>
-
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Quantity</label>
@@ -106,37 +119,27 @@
                         <label class="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Price (₹/$)</label>
                         <div class="flex gap-1 mt-1">
                             <input type="number" id="priceInput" step="0.01" class="w-full px-3 py-2.5 rounded-lg text-sm md:text-base">
-                            <button onclick="fetchLivePrice()" class="bg-slate-700 active:bg-slate-600 px-3 rounded-lg text-xs md:text-sm whitespace-nowrap transition" title="Fetch Live Price">🔍</button>
+                            <button onclick="fetchLivePrice()" class="bg-slate-700 active:bg-slate-600 px-3 rounded-lg text-xs md:text-sm whitespace-nowrap transition">🔍</button>
                         </div>
                     </div>
                 </div>
-
-                <button onclick="addStock()" class="w-full btn-success text-white py-3 rounded-xl font-semibold transition mt-2 text-sm md:text-base shadow-lg shadow-green-900/20">
-                    Add to Portfolio
-                </button>
+                <button onclick="addStock()" class="w-full btn-success text-white py-3 rounded-xl font-semibold transition mt-2 text-sm md:text-base shadow-lg shadow-green-900/20">Add to Portfolio</button>
                 <p id="addStatus" class="text-xs text-center text-gray-500 h-4"></p>
             </div>
         </div>
 
-        <!-- CENTER/RIGHT: Charts & Holdings -->
         <div class="lg:col-span-2 space-y-4 md:space-y-6">
-            <!-- Charts -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div class="glass p-4 md:p-5 rounded-xl">
                     <h3 class="font-semibold text-white text-sm md:text-base mb-3">Allocation</h3>
-                    <div class="h-48 md:h-56 w-full flex justify-center">
-                        <canvas id="allocationChart"></canvas>
-                    </div>
+                    <div class="h-48 md:h-56 w-full flex justify-center"><canvas id="allocationChart"></canvas></div>
                 </div>
                 <div class="glass p-4 md:p-5 rounded-xl">
                     <h3 class="font-semibold text-white text-sm md:text-base mb-3">Value History</h3>
-                    <div class="h-48 md:h-56 w-full">
-                        <canvas id="historyChart"></canvas>
-                    </div>
+                    <div class="h-48 md:h-56 w-full"><canvas id="historyChart"></canvas></div>
                 </div>
             </div>
             
-            <!-- Holdings Section -->
             <div class="glass rounded-xl overflow-hidden">
                 <div class="p-4 border-b border-slate-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <h3 class="font-semibold text-white text-sm md:text-base">Current Holdings</h3>
@@ -145,94 +148,30 @@
                         <svg class="w-4 h-4 text-gray-500 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
                 </div>
-
-                <!-- MOBILE CARD VIEW -->
-                <div id="holdingsCards" class="lg:hidden divide-y divide-slate-700 max-h-[500px] overflow-y-auto">
-                    <!-- Cards injected via JS -->
-                </div>
-
-                <!-- DESKTOP TABLE VIEW -->
+                <div id="holdingsCards" class="lg:hidden divide-y divide-slate-700 max-h-[500px] overflow-y-auto"></div>
                 <div class="hidden lg:block overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-gray-400 uppercase bg-slate-800/50">
-                            <tr>
-                                <th class="px-4 py-3">Ticker</th>
-                                <th class="px-4 py-3">Qty</th>
-                                <th class="px-4 py-3">Avg Price</th>
-                                <th class="px-4 py-3">Current</th>
-                                <th class="px-4 py-3">Value</th>
-                                <th class="px-4 py-3">P&L</th>
-                                <th class="px-4 py-3 text-right">Actions</th>
-                            </tr>
+                            <tr><th class="px-4 py-3">Ticker</th><th class="px-4 py-3">Qty</th><th class="px-4 py-3">Avg Price</th><th class="px-4 py-3">Current</th><th class="px-4 py-3">Value</th><th class="px-4 py-3">P&L</th><th class="px-4 py-3 text-right">Actions</th></tr>
                         </thead>
                         <tbody id="holdingsTableBody" class="divide-y divide-slate-700"></tbody>
                     </table>
                 </div>
-                
-                <div id="emptyState" class="hidden p-8 text-center text-gray-500 italic text-sm">
-                    No holdings match your search, or portfolio is empty.
-                </div>
+                <div id="emptyState" class="hidden p-8 text-center text-gray-500 italic text-sm">No holdings match your search, or portfolio is empty.</div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- STATE MANAGEMENT ---
         let portfolio = []; 
         let history = [];   
-        let fileHandle = null; 
-        let isLocalStorageMode = false;
         let allocationChartInstance = null;
         let historyChartInstance = null;
         let searchQuery = "";
+        
+        // Warning State
+        let hasWarned = sessionStorage.getItem('pt_warned') === 'true';
 
-        // --- ROBUST INDEXEDDB FOR FILE HANDLE ---
-        const DB_NAME = 'PortfolioTrackerDB';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'FileHandles';
-
-        function openDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                request.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME);
-                request.onsuccess = (e) => resolve(e.target.result);
-                request.onerror = (e) => reject(e);
-            });
-        }
-
-        function saveFileHandleToDB(handle) {
-            return new Promise((resolve, reject) => {
-                openDB().then(db => {
-                    const tx = db.transaction(STORE_NAME, 'readwrite');
-                    const request = tx.objectStore(STORE_NAME).put(handle, 'currentPortfolio');
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
-            });
-        }
-
-        function getFileHandleFromDB() {
-            return new Promise((resolve, reject) => {
-                openDB().then(db => {
-                    const tx = db.transaction(STORE_NAME, 'readonly');
-                    const request = tx.objectStore(STORE_NAME).get('currentPortfolio');
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-            });
-        }
-
-        function clearFileHandleFromDB() {
-            return new Promise((resolve) => {
-                openDB().then(db => {
-                    const tx = db.transaction(STORE_NAME, 'readwrite');
-                    tx.objectStore(STORE_NAME).delete('currentPortfolio');
-                    tx.oncomplete = () => resolve();
-                });
-            });
-        }
-
-        // --- LOCAL STORAGE FALLBACK (For Safari/iOS) ---
         function saveToLocalStorage() {
             localStorage.setItem('pt_portfolio', JSON.stringify(portfolio));
             localStorage.setItem('pt_history', JSON.stringify(history));
@@ -249,113 +188,83 @@
             return false;
         }
 
-        // --- STARTUP LOGIC (Bulletproof) ---
-        async function checkForSavedData() {
-            // 1. Try IndexedDB (Chrome/Edge File Handle)
-            try {
-                const handle = await getFileHandleFromDB();
-                if (handle) {
-                    const permission = await handle.requestPermission({ mode: 'readwrite' });
-                    if (permission === 'granted') {
-                        fileHandle = handle;
-                        const file = await fileHandle.getFile();
-                        document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name} (Auto-saves to file)`;
-                        const text = await file.text();
-                        parseCSV(text);
-                        document.getElementById('startupModal').classList.add('hidden');
-                        updateUI();
-                        return; // Success!
-                    }
-                }
-            } catch (err) {
-                console.log("IndexedDB handle failed or denied", err);
-            }
-
-            // 2. Try LocalStorage (Safari/iOS/Firefox Fallback)
+        function checkForSavedData() {
             if (loadFromLocalStorage()) {
-                isLocalStorageMode = true;
-                document.getElementById('fileNameDisplay').textContent = "Loaded from Browser Memory (Auto-saves locally)";
-                document.getElementById('exportBtn').classList.remove('hidden'); // Show export button
                 document.getElementById('startupModal').classList.add('hidden');
                 updateUI();
-                return; // Success!
+            } else {
+                document.getElementById('startupModal').classList.remove('hidden');
             }
-
-            // 3. If all else fails, show modal
-            document.getElementById('startupModal').classList.remove('hidden');
         }
 
         function startFresh() {
-            clearFileHandleFromDB();
             localStorage.removeItem('pt_portfolio');
             localStorage.removeItem('pt_history');
-            fileHandle = null;
-            isLocalStorageMode = true;
-            portfolio = [];
-            history = [];
-            document.getElementById('fileNameDisplay').textContent = "New Portfolio (Saved to browser memory)";
-            document.getElementById('exportBtn').classList.remove('hidden');
+            portfolio = []; history = [];
             document.getElementById('startupModal').classList.add('hidden');
             addHistorySnapshot();
             autoSave();
         }
 
-        async function loadFile() {
-            if ('showOpenFilePicker' in window) {
-                try {
-                    const [handle] = await window.showOpenFilePicker({
-                        types: [{ description: 'CSV Files', accept: { 'text/csv': ['.csv'] } }]
-                    });
-                    fileHandle = handle;
-                    isLocalStorageMode = false;
-                    document.getElementById('exportBtn').classList.add('hidden');
-                    await saveFileHandleToDB(handle);
-                    
-                    const file = await fileHandle.getFile();
-                    document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name} (Auto-saves to file)`;
-                    const text = await file.text();
-                    parseCSV(text);
-                    document.getElementById('startupModal').classList.add('hidden');
-                    autoSave();
-                } catch (err) {
-                    console.error("File pick cancelled", err);
-                }
-            } else {
-                document.getElementById('fileInput').click();
-            }
-        }
+        function importCSV() { document.getElementById('fileInput').click(); }
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-            isLocalStorageMode = true;
-            document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name} (Saved to browser memory)`;
-            document.getElementById('exportBtn').classList.remove('hidden');
-            
             const reader = new FileReader();
             reader.onload = function(e) {
                 parseCSV(e.target.result);
                 document.getElementById('startupModal').classList.add('hidden');
                 autoSave();
+                alert("✅ Portfolio imported successfully!");
             };
             reader.readAsText(file);
         }
 
-        // --- CSV PARSING & GENERATION ---
+        function exportCSV() {
+            const csvContent = generateCSV();
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `portfolio_backup_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // --- WARNING MODAL LOGIC ---
+        function showExportWarning() {
+            if (hasWarned) return; // Don't show if snoozed
+            const modal = document.getElementById('exportWarningModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeWarning() {
+            const modal = document.getElementById('exportWarningModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+
+            if (document.getElementById('dontRemindCheck').checked) {
+                sessionStorage.setItem('pt_warned', 'true');
+                hasWarned = true;
+            }
+        }
+
+        function downloadAndClose() {
+            exportCSV();
+            closeWarning();
+        }
+
         function parseCSV(text) {
-            portfolio = [];
-            history = [];
+            portfolio = []; history = [];
             const lines = text.split('\n').filter(line => line.trim() !== '');
             for (let i = 1; i < lines.length; i++) {
                 const cols = lines[i].split(',').map(c => c.trim());
                 if (cols.length >= 5) {
-                    portfolio.push({
-                        ticker: cols[0],
-                        qty: parseFloat(cols[1]),
-                        avgPrice: parseFloat(cols[2]),
-                        currentPrice: parseFloat(cols[3]),
-                        dateAdded: cols[4]
-                    });
+                    portfolio.push({ ticker: cols[0], qty: parseFloat(cols[1]), avgPrice: parseFloat(cols[2]), currentPrice: parseFloat(cols[3]), dateAdded: cols[4] });
                 }
             }
             if (history.length === 0) addHistorySnapshot();
@@ -363,60 +272,27 @@
 
         function generateCSV() {
             let csv = "Ticker,Quantity,AvgPrice,CurrentPrice,DateAdded\n";
-            portfolio.forEach(p => {
-                csv += `${p.ticker},${p.qty},${p.avgPrice},${p.currentPrice},${p.dateAdded}\n`;
-            });
+            portfolio.forEach(p => { csv += `${p.ticker},${p.qty},${p.avgPrice},${p.currentPrice},${p.dateAdded}\n`; });
             return csv;
         }
 
-        function exportCSV() {
-            const blob = new Blob([generateCSV()], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `portfolio_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // --- AUTO-SAVE LOGIC ---
-        async function autoSave() {
+        function autoSave() {
             addHistorySnapshot();
+            saveToLocalStorage(); 
             updateCharts();
-            
-            if (fileHandle && !isLocalStorageMode) {
-                try {
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(generateCSV());
-                    await writable.close();
-                    showAutoSaveIndicator("Saved to file");
-                } catch (err) {
-                    // Permission lost, fall back to local storage seamlessly
-                    fileHandle = null;
-                    isLocalStorageMode = true;
-                    saveToLocalStorage();
-                    document.getElementById('fileNameDisplay').textContent = "File access lost. Saved to browser memory.";
-                    document.getElementById('exportBtn').classList.remove('hidden');
-                    showAutoSaveIndicator("Saved to browser memory");
-                }
-            } else {
-                // Always save to local storage as primary or backup
-                saveToLocalStorage();
-                showAutoSaveIndicator("Saved to browser memory");
-            }
             updateUI();
+            showAutoSaveIndicator();
+            
+            // Trigger the warning popup on changes
+            showExportWarning();
         }
 
-        function showAutoSaveIndicator(msg) {
+        function showAutoSaveIndicator() {
             const el = document.getElementById('autoSaveIndicator');
-            document.getElementById('saveMsg').textContent = msg;
             el.style.opacity = '1';
             setTimeout(() => { el.style.opacity = '0'; }, 2000);
         }
 
-        // --- DATA & TRADING LOGIC ---
         async function fetchLivePrice() {
             let ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
             if (!ticker) return alert("Please enter a ticker first.");
@@ -443,11 +319,10 @@
             }
         }
 
-        async function addStock() {
+        function addStock() {
             const ticker = document.getElementById('tickerInput').value.trim().toUpperCase().replace(':', '.');
             const qty = parseFloat(document.getElementById('qtyInput').value);
             const price = parseFloat(document.getElementById('priceInput').value);
-
             if (!ticker || !qty || !price) return alert("Please fill in all fields.");
 
             const existing = portfolio.find(p => p.ticker === ticker);
@@ -464,29 +339,24 @@
             document.getElementById('qtyInput').value = '1';
             document.getElementById('priceInput').value = '';
             document.getElementById('addStatus').textContent = "";
-            
-            await autoSave();
+            autoSave();
         }
 
-        async function removeStock(ticker) {
+        function removeStock(ticker) {
             if (confirm(`Remove ${ticker} from portfolio?`)) {
                 portfolio = portfolio.filter(p => p.ticker !== ticker);
-                await autoSave();
+                autoSave();
             }
         }
 
-        async function updateCurrentPrice(ticker) {
+        function updateCurrentPrice(ticker) {
             const newPrice = prompt(`Enter new current market price for ${ticker}:`);
             if (newPrice && !isNaN(newPrice)) {
                 const stock = portfolio.find(p => p.ticker === ticker);
-                if (stock) {
-                    stock.currentPrice = parseFloat(newPrice);
-                    await autoSave();
-                }
+                if (stock) { stock.currentPrice = parseFloat(newPrice); autoSave(); }
             }
         }
 
-        // --- UI & CHART UPDATES ---
         function addHistorySnapshot() {
             const totalVal = portfolio.reduce((sum, p) => sum + (p.qty * p.currentPrice), 0);
             const today = new Date().toISOString().split('T')[0];
@@ -499,50 +369,32 @@
         let searchTimeout;
         document.getElementById('searchHoldings').addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                searchQuery = e.target.value.trim().toUpperCase();
-                updateUI();
-            }, 300);
+            searchTimeout = setTimeout(() => { searchQuery = e.target.value.trim().toUpperCase(); updateUI(); }, 300);
         });
 
         function updateUI() {
-            const filteredPortfolio = searchQuery 
-                ? portfolio.filter(p => p.ticker.includes(searchQuery))
-                : portfolio;
-
+            const filteredPortfolio = searchQuery ? portfolio.filter(p => p.ticker.includes(searchQuery)) : portfolio;
             const mobileCards = document.getElementById('holdingsCards');
             const desktopTable = document.getElementById('holdingsTableBody');
             const emptyState = document.getElementById('emptyState');
 
-            mobileCards.innerHTML = '';
-            desktopTable.innerHTML = '';
-
-            if (filteredPortfolio.length === 0) {
-                emptyState.classList.remove('hidden');
-            } else {
-                emptyState.classList.add('hidden');
-            }
+            mobileCards.innerHTML = ''; desktopTable.innerHTML = '';
+            if (filteredPortfolio.length === 0) emptyState.classList.remove('hidden');
+            else emptyState.classList.add('hidden');
 
             filteredPortfolio.forEach(p => {
                 const invested = p.qty * p.avgPrice;
                 const currentVal = p.qty * p.currentPrice;
                 const pnl = currentVal - invested;
                 const pnlPct = invested > 0 ? ((pnl / invested) * 100).toFixed(2) : '0.00';
-                
                 const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
                 const pnlSign = pnl >= 0 ? '+' : '';
 
                 mobileCards.innerHTML += `
                     <div class="p-4 space-y-3">
                         <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-bold text-white text-base">${p.ticker}</h4>
-                                <p class="text-xs text-gray-400">${p.qty} shares @ Avg ₹${p.avgPrice.toFixed(2)}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-bold text-white">₹${currentVal.toFixed(2)}</p>
-                                <p class="text-xs ${pnlColor} font-medium">${pnlSign}₹${pnl.toFixed(2)} (${pnlSign}${pnlPct}%)</p>
-                            </div>
+                            <div><h4 class="font-bold text-white text-base">${p.ticker}</h4><p class="text-xs text-gray-400">${p.qty} shares @ Avg ₹${p.avgPrice.toFixed(2)}</p></div>
+                            <div class="text-right"><p class="font-bold text-white">₹${currentVal.toFixed(2)}</p><p class="text-xs ${pnlColor} font-medium">${pnlSign}₹${pnl.toFixed(2)} (${pnlSign}${pnlPct}%)</p></div>
                         </div>
                         <div class="flex justify-between items-center pt-2 border-t border-slate-700/50">
                             <span class="text-xs text-gray-400">Current: ₹${p.currentPrice.toFixed(2)}</span>
@@ -551,40 +403,33 @@
                                 <button onclick="removeStock('${p.ticker}')" class="text-xs bg-red-900/30 active:bg-red-900/50 text-red-400 px-3 py-1.5 rounded-lg transition border border-red-900/50">Remove</button>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
 
                 desktopTable.innerHTML += `
                     <tr class="hover:bg-slate-800/50 transition">
-                        <td class="px-4 py-3 font-bold text-white">${p.ticker}</td>
-                        <td class="px-4 py-3">${p.qty}</td>
-                        <td class="px-4 py-3 text-gray-400">₹${p.avgPrice.toFixed(2)}</td>
-                        <td class="px-4 py-3 text-white">₹${p.currentPrice.toFixed(2)}</td>
+                        <td class="px-4 py-3 font-bold text-white">${p.ticker}</td><td class="px-4 py-3">${p.qty}</td>
+                        <td class="px-4 py-3 text-gray-400">₹${p.avgPrice.toFixed(2)}</td><td class="px-4 py-3 text-white">₹${p.currentPrice.toFixed(2)}</td>
                         <td class="px-4 py-3 font-semibold">₹${currentVal.toFixed(2)}</td>
                         <td class="px-4 py-3 ${pnlColor} whitespace-nowrap">${pnlSign}₹${pnl.toFixed(2)} (${pnlSign}${pnlPct}%)</td>
                         <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                             <button onclick="updateCurrentPrice('${p.ticker}')" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white transition">Update</button>
                             <button onclick="removeStock('${p.ticker}')" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-300 px-2 py-1 rounded transition">Remove</button>
                         </td>
-                    </tr>
-                `;
+                    </tr>`;
             });
 
             const grandTotalInvested = portfolio.reduce((sum, p) => sum + (p.qty * p.avgPrice), 0);
             const grandTotalValue = portfolio.reduce((sum, p) => sum + (p.qty * p.currentPrice), 0);
             const grandTotalPnL = grandTotalValue - grandTotalInvested;
             const grandPnLPct = grandTotalInvested > 0 ? ((grandTotalPnL / grandTotalInvested) * 100).toFixed(2) : '0.00';
-
             const pnlColor = grandTotalPnL >= 0 ? 'text-green-400' : 'text-red-400';
             const pnlSign = grandTotalPnL >= 0 ? '+' : '';
 
             document.getElementById('totalInvested').textContent = `₹${grandTotalInvested.toFixed(2)}`;
             document.getElementById('totalValue').textContent = `₹${grandTotalValue.toFixed(2)}`;
-            
             const pnlEl = document.getElementById('totalPnL');
             pnlEl.textContent = `${pnlSign}₹${grandTotalPnL.toFixed(2)} (${pnlSign}${grandPnLPct}%)`;
             pnlEl.className = `text-base md:text-lg font-bold ${pnlColor} mt-1 whitespace-nowrap`;
-
             updateCharts();
         }
 
@@ -597,52 +442,19 @@
             if (allocationChartInstance) allocationChartInstance.destroy();
             allocationChartInstance = new Chart(ctxPie, {
                 type: 'doughnut',
-                data: {
-                    labels: labels.length ? labels : ['No Data'],
-                    datasets: [{
-                        data: data.length ? data : [1],
-                        backgroundColor: data.length ? colors : ['#334155'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12 } } },
-                    cutout: '65%'
-                }
+                data: { labels: labels.length ? labels : ['No Data'], datasets: [{ data: data.length ? data : [1], backgroundColor: data.length ? colors : ['#334155'], borderWidth: 0, hoverOffset: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12 } } }, cutout: '65%' }
             });
 
             const ctxLine = document.getElementById('historyChart').getContext('2d');
             if (historyChartInstance) historyChartInstance.destroy();
             historyChartInstance = new Chart(ctxLine, {
                 type: 'line',
-                data: {
-                    labels: history.map(h => h.date),
-                    datasets: [{
-                        label: 'Value',
-                        data: history.map(h => h.totalValue),
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 }, maxTicksLimit: 6 } }
-                    }
-                }
+                data: { labels: history.map(h => h.date), datasets: [{ label: 'Value', data: history.map(h => h.totalValue), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.4, pointRadius: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 }, maxTicksLimit: 6 } } } }
             });
         }
 
-        // Initialize
         window.addEventListener('DOMContentLoaded', checkForSavedData);
     </script>
 </body>
