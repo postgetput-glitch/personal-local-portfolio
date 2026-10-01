@@ -15,20 +15,19 @@
         input, select { background: #1e293b; border: 1px solid #334155; color: white; }
         input:focus { outline: none; border-color: #3b82f6; }
         #startupModal { background: rgba(0,0,0,0.9); }
-        /* Smooth fade for auto-save indicator */
         .fade-text { transition: opacity 0.5s ease-in-out; }
     </style>
 </head>
 <body class="min-h-screen p-3 md:p-6 pb-20">
 
-    <!-- STARTUP MODAL -->
+    <!-- STARTUP MODAL (Only shows if absolutely no saved data exists) -->
     <div id="startupModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="glass p-6 rounded-2xl max-w-sm w-full text-center space-y-5 shadow-2xl">
             <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             </div>
-            <h2 class="text-xl font-bold text-white">Portfolio Tracker</h2>
-            <p class="text-gray-400 text-sm">Load your existing CSV to continue, or start fresh. Your file location will be remembered for auto-save.</p>
+            <h2 class="text-xl font-bold text-white">Welcome Back</h2>
+            <p class="text-gray-400 text-sm">No saved portfolio found. Start fresh or locate your CSV. <br><span class="text-blue-400 text-xs">(Your choice will be remembered permanently)</span></p>
             
             <div class="space-y-3 pt-2">
                 <button onclick="loadFile()" class="w-full btn-primary text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30">
@@ -44,24 +43,29 @@
     </div>
 
     <!-- HIDDEN FILE INPUT FOR FALLBACK -->
-    <input type="file" id="fileInput" accept=".csv,.json" class="hidden" onchange="handleFileSelect(event)">
+    <input type="file" id="fileInput" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
 
     <!-- HEADER -->
     <header class="mb-6 space-y-4">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             <div>
                 <h1 class="text-xl md:text-2xl font-bold text-white">My Portfolio</h1>
-                <div class="flex items-center gap-2">
-                    <p class="text-xs text-gray-400 truncate max-w-[200px]" id="fileNameDisplay">No file loaded</p>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <p class="text-xs text-gray-400 truncate max-w-[200px]" id="fileNameDisplay">Loading...</p>
                     <span id="autoSaveIndicator" class="text-xs text-green-400 font-medium opacity-0 fade-text flex items-center gap-1">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        Auto-saved
+                        <span id="saveMsg">Auto-saved</span>
                     </span>
                 </div>
             </div>
+            <!-- Export Button (Visible if in LocalStorage mode) -->
+            <button id="exportBtn" onclick="exportCSV()" class="hidden text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Export CSV
+            </button>
         </div>
         
-        <!-- Metrics Grid (Mobile Friendly) -->
+        <!-- Metrics Grid -->
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div class="glass px-4 py-3 rounded-xl">
                 <p class="text-gray-400 text-[10px] md:text-xs uppercase tracking-wider">Invested</p>
@@ -136,14 +140,13 @@
             <div class="glass rounded-xl overflow-hidden">
                 <div class="p-4 border-b border-slate-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <h3 class="font-semibold text-white text-sm md:text-base">Current Holdings</h3>
-                    <!-- Debounce Search -->
                     <div class="relative w-full sm:w-48">
                         <input type="text" id="searchHoldings" placeholder="Search ticker..." class="w-full pl-8 pr-3 py-2 rounded-lg text-xs md:text-sm bg-slate-800 border-slate-600 focus:border-blue-500">
                         <svg class="w-4 h-4 text-gray-500 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
                 </div>
 
-                <!-- MOBILE CARD VIEW (Prevents overflow) -->
+                <!-- MOBILE CARD VIEW -->
                 <div id="holdingsCards" class="lg:hidden divide-y divide-slate-700 max-h-[500px] overflow-y-auto">
                     <!-- Cards injected via JS -->
                 </div>
@@ -162,9 +165,7 @@
                                 <th class="px-4 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="holdingsTableBody" class="divide-y divide-slate-700">
-                            <!-- Rows injected via JS -->
-                        </tbody>
+                        <tbody id="holdingsTableBody" class="divide-y divide-slate-700"></tbody>
                     </table>
                 </div>
                 
@@ -180,11 +181,12 @@
         let portfolio = []; 
         let history = [];   
         let fileHandle = null; 
+        let isLocalStorageMode = false;
         let allocationChartInstance = null;
         let historyChartInstance = null;
         let searchQuery = "";
 
-        // --- INDEXEDDB FOR FILE HANDLE PERSISTENCE ---
+        // --- ROBUST INDEXEDDB FOR FILE HANDLE ---
         const DB_NAME = 'PortfolioTrackerDB';
         const DB_VERSION = 1;
         const STORE_NAME = 'FileHandles';
@@ -192,68 +194,110 @@
         function openDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
-                request.onupgradeneeded = (e) => {
-                    e.target.result.createObjectStore(STORE_NAME);
-                };
+                request.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME);
                 request.onsuccess = (e) => resolve(e.target.result);
                 request.onerror = (e) => reject(e);
             });
         }
 
-        async function saveFileHandleToDB(handle) {
-            const db = await openDB();
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            tx.objectStore(STORE_NAME).put(handle, 'currentPortfolio');
-            return tx.done;
+        function saveFileHandleToDB(handle) {
+            return new Promise((resolve, reject) => {
+                openDB().then(db => {
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    const request = tx.objectStore(STORE_NAME).put(handle, 'currentPortfolio');
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            });
         }
 
-        async function getFileHandleFromDB() {
-            const db = await openDB();
-            const tx = db.transaction(STORE_NAME, 'readonly');
-            return tx.objectStore(STORE_NAME).get('currentPortfolio');
+        function getFileHandleFromDB() {
+            return new Promise((resolve, reject) => {
+                openDB().then(db => {
+                    const tx = db.transaction(STORE_NAME, 'readonly');
+                    const request = tx.objectStore(STORE_NAME).get('currentPortfolio');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            });
         }
 
-        async function clearFileHandleFromDB() {
-            const db = await openDB();
-            const tx = db.transaction(STORE_NAME, 'readwrite');
-            tx.objectStore(STORE_NAME).delete('currentPortfolio');
-            return tx.done;
+        function clearFileHandleFromDB() {
+            return new Promise((resolve) => {
+                openDB().then(db => {
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    tx.objectStore(STORE_NAME).delete('currentPortfolio');
+                    tx.oncomplete = () => resolve();
+                });
+            });
         }
 
-        // --- STARTUP LOGIC ---
-        async function checkForSavedFile() {
+        // --- LOCAL STORAGE FALLBACK (For Safari/iOS) ---
+        function saveToLocalStorage() {
+            localStorage.setItem('pt_portfolio', JSON.stringify(portfolio));
+            localStorage.setItem('pt_history', JSON.stringify(history));
+        }
+
+        function loadFromLocalStorage() {
+            const p = localStorage.getItem('pt_portfolio');
+            const h = localStorage.getItem('pt_history');
+            if (p) {
+                portfolio = JSON.parse(p);
+                history = h ? JSON.parse(h) : [];
+                return true;
+            }
+            return false;
+        }
+
+        // --- STARTUP LOGIC (Bulletproof) ---
+        async function checkForSavedData() {
+            // 1. Try IndexedDB (Chrome/Edge File Handle)
             try {
                 const handle = await getFileHandleFromDB();
                 if (handle) {
-                    // Request permission to access the file
                     const permission = await handle.requestPermission({ mode: 'readwrite' });
                     if (permission === 'granted') {
                         fileHandle = handle;
                         const file = await fileHandle.getFile();
-                        document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name}`;
+                        document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name} (Auto-saves to file)`;
                         const text = await file.text();
                         parseCSV(text);
                         document.getElementById('startupModal').classList.add('hidden');
                         updateUI();
-                        return; // Successfully loaded
+                        return; // Success!
                     }
                 }
             } catch (err) {
-                console.log("No saved file or permission denied", err);
+                console.log("IndexedDB handle failed or denied", err);
             }
-            // If we reach here, show the modal
+
+            // 2. Try LocalStorage (Safari/iOS/Firefox Fallback)
+            if (loadFromLocalStorage()) {
+                isLocalStorageMode = true;
+                document.getElementById('fileNameDisplay').textContent = "Loaded from Browser Memory (Auto-saves locally)";
+                document.getElementById('exportBtn').classList.remove('hidden'); // Show export button
+                document.getElementById('startupModal').classList.add('hidden');
+                updateUI();
+                return; // Success!
+            }
+
+            // 3. If all else fails, show modal
             document.getElementById('startupModal').classList.remove('hidden');
         }
 
         function startFresh() {
-            clearFileHandleFromDB(); // Clear any old references
+            clearFileHandleFromDB();
+            localStorage.removeItem('pt_portfolio');
+            localStorage.removeItem('pt_history');
             fileHandle = null;
+            isLocalStorageMode = true;
             portfolio = [];
             history = [];
-            document.getElementById('fileNameDisplay').textContent = "New Portfolio (Will save to new file)";
+            document.getElementById('fileNameDisplay').textContent = "New Portfolio (Saved to browser memory)";
+            document.getElementById('exportBtn').classList.remove('hidden');
             document.getElementById('startupModal').classList.add('hidden');
             addHistorySnapshot();
-            updateUI();
+            autoSave();
         }
 
         async function loadFile() {
@@ -263,16 +307,18 @@
                         types: [{ description: 'CSV Files', accept: { 'text/csv': ['.csv'] } }]
                     });
                     fileHandle = handle;
-                    await saveFileHandleToDB(handle); // Remember it!
+                    isLocalStorageMode = false;
+                    document.getElementById('exportBtn').classList.add('hidden');
+                    await saveFileHandleToDB(handle);
                     
                     const file = await fileHandle.getFile();
-                    document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name}`;
+                    document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name} (Auto-saves to file)`;
                     const text = await file.text();
                     parseCSV(text);
                     document.getElementById('startupModal').classList.add('hidden');
-                    updateUI();
+                    autoSave();
                 } catch (err) {
-                    console.error("File pick cancelled or failed", err);
+                    console.error("File pick cancelled", err);
                 }
             } else {
                 document.getElementById('fileInput').click();
@@ -282,12 +328,15 @@
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-            document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name} (Download mode)`;
+            isLocalStorageMode = true;
+            document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name} (Saved to browser memory)`;
+            document.getElementById('exportBtn').classList.remove('hidden');
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 parseCSV(e.target.result);
                 document.getElementById('startupModal').classList.add('hidden');
-                updateUI();
+                autoSave();
             };
             reader.readAsText(file);
         }
@@ -320,42 +369,49 @@
             return csv;
         }
 
+        function exportCSV() {
+            const blob = new Blob([generateCSV()], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `portfolio_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         // --- AUTO-SAVE LOGIC ---
         async function autoSave() {
             addHistorySnapshot();
             updateCharts();
             
-            if (fileHandle) {
+            if (fileHandle && !isLocalStorageMode) {
                 try {
                     const writable = await fileHandle.createWritable();
                     await writable.write(generateCSV());
                     await writable.close();
-                    showAutoSaveIndicator();
+                    showAutoSaveIndicator("Saved to file");
                 } catch (err) {
-                    console.error("Auto-save failed, permission may be lost", err);
-                    // If permission lost, clear DB and prompt user on next action
-                    await clearFileHandleFromDB();
+                    // Permission lost, fall back to local storage seamlessly
                     fileHandle = null;
-                    document.getElementById('fileNameDisplay').textContent = "Save permission lost. Please relocate file.";
-                    alert("Auto-save failed. Browser revoked file access. Please click 'Locate Existing .CSV' again.");
+                    isLocalStorageMode = true;
+                    saveToLocalStorage();
+                    document.getElementById('fileNameDisplay').textContent = "File access lost. Saved to browser memory.";
+                    document.getElementById('exportBtn').classList.remove('hidden');
+                    showAutoSaveIndicator("Saved to browser memory");
                 }
             } else {
-                // Fallback: Download file
-                const blob = new Blob([generateCSV()], { type: 'text/csv' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `portfolio_${new Date().toISOString().split('T')[0]}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                // Always save to local storage as primary or backup
+                saveToLocalStorage();
+                showAutoSaveIndicator("Saved to browser memory");
             }
             updateUI();
         }
 
-        function showAutoSaveIndicator() {
+        function showAutoSaveIndicator(msg) {
             const el = document.getElementById('autoSaveIndicator');
+            document.getElementById('saveMsg').textContent = msg;
             el.style.opacity = '1';
             setTimeout(() => { el.style.opacity = '0'; }, 2000);
         }
@@ -409,13 +465,13 @@
             document.getElementById('priceInput').value = '';
             document.getElementById('addStatus').textContent = "";
             
-            await autoSave(); // AUTO-SAVE TRIGGER
+            await autoSave();
         }
 
         async function removeStock(ticker) {
             if (confirm(`Remove ${ticker} from portfolio?`)) {
                 portfolio = portfolio.filter(p => p.ticker !== ticker);
-                await autoSave(); // AUTO-SAVE TRIGGER
+                await autoSave();
             }
         }
 
@@ -425,7 +481,7 @@
                 const stock = portfolio.find(p => p.ticker === ticker);
                 if (stock) {
                     stock.currentPrice = parseFloat(newPrice);
-                    await autoSave(); // AUTO-SAVE TRIGGER
+                    await autoSave();
                 }
             }
         }
@@ -440,14 +496,13 @@
             if (history.length > 30) history = history.slice(-30);
         }
 
-        // Debounce Search Logic
         let searchTimeout;
         document.getElementById('searchHoldings').addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 searchQuery = e.target.value.trim().toUpperCase();
                 updateUI();
-            }, 300); // 300ms debounce
+            }, 300);
         });
 
         function updateUI() {
@@ -462,9 +517,6 @@
             mobileCards.innerHTML = '';
             desktopTable.innerHTML = '';
 
-            let totalInvested = 0;
-            let totalCurrentValue = 0;
-
             if (filteredPortfolio.length === 0) {
                 emptyState.classList.remove('hidden');
             } else {
@@ -477,13 +529,9 @@
                 const pnl = currentVal - invested;
                 const pnlPct = invested > 0 ? ((pnl / invested) * 100).toFixed(2) : '0.00';
                 
-                totalInvested += invested;
-                totalCurrentValue += currentVal;
-
                 const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
                 const pnlSign = pnl >= 0 ? '+' : '';
 
-                // Mobile Card Template
                 mobileCards.innerHTML += `
                     <div class="p-4 space-y-3">
                         <div class="flex justify-between items-start">
@@ -506,7 +554,6 @@
                     </div>
                 `;
 
-                // Desktop Table Template
                 desktopTable.innerHTML += `
                     <tr class="hover:bg-slate-800/50 transition">
                         <td class="px-4 py-3 font-bold text-white">${p.ticker}</td>
@@ -523,7 +570,6 @@
                 `;
             });
 
-            // Calculate totals based on ENTIRE portfolio, not just filtered
             const grandTotalInvested = portfolio.reduce((sum, p) => sum + (p.qty * p.avgPrice), 0);
             const grandTotalValue = portfolio.reduce((sum, p) => sum + (p.qty * p.currentPrice), 0);
             const grandTotalPnL = grandTotalValue - grandTotalInvested;
@@ -563,9 +609,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12 } }
-                    },
+                    plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12 } } },
                     cutout: '65%'
                 }
             });
@@ -599,7 +643,7 @@
         }
 
         // Initialize
-        window.addEventListener('DOMContentLoaded', checkForSavedFile);
+        window.addEventListener('DOMContentLoaded', checkForSavedData);
     </script>
 </body>
 </html>
