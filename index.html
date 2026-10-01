@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <!-- EXPORT WARNING MODAL (New!) -->
+    <!-- MANDATORY EXPORT WARNING MODAL -->
     <div id="exportWarningModal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
         <div class="glass p-6 rounded-2xl max-w-sm w-full text-center space-y-4 border border-orange-500/50 shadow-2xl shadow-orange-900/20">
             <div class="w-14 h-14 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto">
@@ -54,11 +54,6 @@
                 </button>
                 <button onclick="closeWarning()" class="w-full bg-slate-700 active:bg-slate-600 text-gray-300 py-2.5 rounded-xl text-sm transition">I'll do it later</button>
             </div>
-            
-            <label class="flex items-center gap-2 text-xs text-gray-400 justify-center mt-2 cursor-pointer">
-                <input type="checkbox" id="dontRemindCheck" class="w-4 h-4 accent-orange-500 rounded">
-                <span>Don't remind me again this session</span>
-            </label>
         </div>
     </div>
 
@@ -168,9 +163,6 @@
         let allocationChartInstance = null;
         let historyChartInstance = null;
         let searchQuery = "";
-        
-        // Warning State
-        let hasWarned = sessionStorage.getItem('pt_warned') === 'true';
 
         function saveToLocalStorage() {
             localStorage.setItem('pt_portfolio', JSON.stringify(portfolio));
@@ -234,9 +226,8 @@
             URL.revokeObjectURL(url);
         }
 
-        // --- WARNING MODAL LOGIC ---
+        // --- MANDATORY WARNING MODAL LOGIC ---
         function showExportWarning() {
-            if (hasWarned) return; // Don't show if snoozed
             const modal = document.getElementById('exportWarningModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -246,11 +237,6 @@
             const modal = document.getElementById('exportWarningModal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-
-            if (document.getElementById('dontRemindCheck').checked) {
-                sessionStorage.setItem('pt_warned', 'true');
-                hasWarned = true;
-            }
         }
 
         function downloadAndClose() {
@@ -283,7 +269,7 @@
             updateUI();
             showAutoSaveIndicator();
             
-            // Trigger the warning popup on changes
+            // MANDATORY: Trigger the warning popup on every change
             showExportWarning();
         }
 
@@ -339,13 +325,13 @@
             document.getElementById('qtyInput').value = '1';
             document.getElementById('priceInput').value = '';
             document.getElementById('addStatus').textContent = "";
-            autoSave();
+            autoSave(); // Triggers mandatory warning
         }
 
         function removeStock(ticker) {
             if (confirm(`Remove ${ticker} from portfolio?`)) {
                 portfolio = portfolio.filter(p => p.ticker !== ticker);
-                autoSave();
+                autoSave(); // Triggers mandatory warning
             }
         }
 
@@ -353,7 +339,10 @@
             const newPrice = prompt(`Enter new current market price for ${ticker}:`);
             if (newPrice && !isNaN(newPrice)) {
                 const stock = portfolio.find(p => p.ticker === ticker);
-                if (stock) { stock.currentPrice = parseFloat(newPrice); autoSave(); }
+                if (stock) { 
+                    stock.currentPrice = parseFloat(newPrice); 
+                    autoSave(); // Triggers mandatory warning
+                }
             }
         }
 
