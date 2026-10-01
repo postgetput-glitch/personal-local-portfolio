@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Investment Portfolio Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .btn-primary { background: #3b82f6; } .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #10b981; } .btn-success:hover { background: #059669; }
+        .btn-danger { background: #ef4444; } .btn-danger:hover { background: #dc2626; }
+        input, select { background: #1e293b; border: 1px solid #334155; color: white; }
+        input:focus { outline: none; border-color: #3b82f6; }
+        /* Modal overlay */
+        #startupModal { background: rgba(0,0,0,0.85); }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-6">
+
+    <!-- STARTUP MODAL -->
+    <div id="startupModal" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="glass p-8 rounded-2xl max-w-md w-full text-center space-y-6">
+            <h2 class="text-2xl font-bold text-white">Welcome to Portfolio Tracker</h2>
+            <p class="text-gray-400 text-sm">To continue, please load your existing portfolio CSV file, or start fresh as a new user.</p>
+            
+            <div class="space-y-3">
+                <button onclick="loadFile()" class="w-full btn-primary text-white py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Locate Existing .CSV File
+                </button>
+                <div class="text-gray-500 text-sm">- OR -</div>
+                <button onclick="startFresh()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-semibold transition">
+                    Start as New User
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-4">Note: For auto-overwrite to work, please use Chrome or Edge.</p>
+        </div>
+    </div>
+
+    <!-- HIDDEN FILE INPUT FOR FALLBACK -->
+    <input type="file" id="fileInput" accept=".csv,.json" class="hidden" onchange="handleFileSelect(event)">
+
+    <!-- HEADER -->
+    <header class="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white">My Investment Portfolio</h1>
+            <p class="text-sm text-gray-400" id="fileNameDisplay">No file loaded</p>
+        </div>
+        <div class="flex gap-4 text-sm">
+            <div class="glass px-5 py-3 rounded-xl">
+                <p class="text-gray-400 text-xs uppercase">Total Invested</p>
+                <p id="totalInvested" class="text-xl font-bold text-white">$0.00</p>
+            </div>
+            <div class="glass px-5 py-3 rounded-xl">
+                <p class="text-gray-400 text-xs uppercase">Current Value</p>
+                <p id="totalValue" class="text-xl font-bold text-blue-400">$0.00</p>
+            </div>
+            <div class="glass px-5 py-3 rounded-xl">
+                <p class="text-gray-400 text-xs uppercase">Total P&L</p>
+                <p id="totalPnL" class="text-xl font-bold text-gray-400">$0.00</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- LEFT: Add Stock -->
+        <div class="lg:col-span-1 space-y-6">
+            <div class="glass p-5 rounded-xl space-y-4">
+                <h2 class="font-semibold text-lg text-white flex items-center gap-2">
+                    <span class="w-2 h-2 bg-green-400 rounded-full"></span> Add Investment
+                </h2>
+                
+                <div>
+                    <label class="text-xs text-gray-400 uppercase">Ticker Symbol (e.g., DIVISLAB.NS)</label>
+                    <input type="text" id="tickerInput" placeholder="DIVISLAB.NS" class="w-full mt-1 px-3 py-2 rounded-lg text-sm">
+                    <p class="text-xs text-gray-500 mt-1">Use .NS for NSE, .BO for BSE</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs text-gray-400 uppercase">Quantity</label>
+                        <input type="number" id="qtyInput" value="1" min="1" class="w-full mt-1 px-3 py-2 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 uppercase">Current Price (₹/$)</label>
+                        <div class="flex gap-1 mt-1">
+                            <input type="number" id="priceInput" step="0.01" class="w-full px-3 py-2 rounded-lg text-sm">
+                            <button onclick="fetchLivePrice()" class="bg-slate-700 hover:bg-slate-600 px-3 rounded-lg text-xs whitespace-nowrap" title="Fetch Live Price">🔍</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="addStock()" class="w-full btn-success text-white py-2.5 rounded-lg font-semibold transition mt-2">
+                    Add to Portfolio
+                </button>
+                <p id="addStatus" class="text-xs text-center text-gray-500"></p>
+            </div>
+
+            <!-- Save Button -->
+            <button onclick="savePortfolio()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                Save & Override File
+            </button>
+        </div>
+
+        <!-- CENTER: Charts -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Allocation Pie Chart -->
+            <div class="glass p-5 rounded-xl">
+                <h3 class="font-semibold text-white mb-4">Portfolio Allocation</h3>
+                <div class="h-64 w-full flex justify-center">
+                    <canvas id="allocationChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Value History Line Chart -->
+            <div class="glass p-5 rounded-xl">
+                <h3 class="font-semibold text-white mb-4">Portfolio Value History</h3>
+                <div class="h-48 w-full">
+                    <canvas id="historyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM: Holdings Table -->
+    <div class="mt-6 glass rounded-xl overflow-hidden">
+        <div class="p-4 border-b border-slate-700">
+            <h3 class="font-semibold text-white">Current Holdings</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs text-gray-400 uppercase bg-slate-800/50">
+                    <tr>
+                        <th class="px-4 py-3">Ticker</th>
+                        <th class="px-4 py-3">Qty</th>
+                        <th class="px-4 py-3">Avg Price</th>
+                        <th class="px-4 py-3">Current Price</th>
+                        <th class="px-4 py-3">Total Value</th>
+                        <th class="px-4 py-3">P&L</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="holdingsTableBody" class="divide-y divide-slate-700">
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500 italic">No holdings yet. Add your first investment above.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // --- STATE MANAGEMENT ---
+        let portfolio = []; // { ticker, qty, avgPrice, currentPrice, dateAdded }
+        let history = [];   // { date, totalValue }
+        let fileHandle = null; // For File System Access API
+        let allocationChartInstance = null;
+        let historyChartInstance = null;
+
+        // --- STARTUP LOGIC ---
+        function startFresh() {
+            document.getElementById('startupModal').classList.add('hidden');
+            document.getElementById('fileNameDisplay').textContent = "New Portfolio (Not yet saved to file)";
+            addHistorySnapshot();
+            updateUI();
+        }
+
+        async function loadFile() {
+            if ('showOpenFilePicker' in window) {
+                try {
+                    [fileHandle] = await window.showOpenFilePicker({
+                        types: [{ description: 'CSV Files', accept: { 'text/csv': ['.csv'] } }]
+                    });
+                    const file = await fileHandle.getFile();
+                    document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name}`;
+                    const text = await file.text();
+                    parseCSV(text);
+                    document.getElementById('startupModal').classList.add('hidden');
+                    updateUI();
+                } catch (err) {
+                    console.error("File pick cancelled or failed", err);
+                }
+            } else {
+                // Fallback for Safari/Firefox
+                document.getElementById('fileInput').click();
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('fileNameDisplay').textContent = `Loaded: ${file.name}`;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parseCSV(e.target.result);
+                document.getElementById('startupModal').classList.add('hidden');
+                updateUI();
+            };
+            reader.readAsText(file);
+        }
+
+        // --- CSV PARSING & GENERATION ---
+        function parseCSV(text) {
+            portfolio = [];
+            history = [];
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            
+            // Simple CSV parse (assumes format: Ticker,Qty,AvgPrice,CurrentPrice,DateAdded)
+            for (let i = 1; i < lines.length; i++) { // Skip header
+                const cols = lines[i].split(',').map(c => c.trim());
+                if (cols.length >= 5) {
+                    portfolio.push({
+                        ticker: cols[0],
+                        qty: parseFloat(cols[1]),
+                        avgPrice: parseFloat(cols[2]),
+                        currentPrice: parseFloat(cols[3]),
+                        dateAdded: cols[4]
+                    });
+                }
+            }
+            // If we have a history section in CSV (optional advanced feature), we could parse it here.
+            // For now, we rebuild history snapshot on load if empty.
+            if (history.length === 0) addHistorySnapshot();
+        }
+
+        function generateCSV() {
+            let csv = "Ticker,Quantity,AvgPrice,CurrentPrice,DateAdded\n";
+            portfolio.forEach(p => {
+                csv += `${p.ticker},${p.qty},${p.avgPrice},${p.currentPrice},${p.dateAdded}\n`;
+            });
+            return csv;
+        }
+
+        // --- FILE SAVING (OVERRIDE) ---
+        async function savePortfolio() {
+            // Add today's snapshot to history before saving
+            addHistorySnapshot();
+            updateCharts();
+
+            const csvContent = generateCSV();
+            
+            if (fileHandle) {
+                try {
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(csvContent);
+                    await writable.close();
+                    alert("✅ Portfolio successfully saved and file overridden!");
+                } catch (err) {
+                    alert("❌ Failed to save. You may need to re-select the file.");
+                    fileHandle = null; // Reset to force fallback
+                }
+            } else {
+                // Fallback: Download file
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `portfolio_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert("✅ Portfolio downloaded! (Note: Use Chrome/Edge and 'Locate File' next time to enable direct overwrite).");
+            }
+            updateUI();
+        }
+
+        // --- DATA & TRADING LOGIC ---
+        async function fetchLivePrice() {
+            let ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+            if (!ticker) return alert("Please enter a ticker first.");
+            
+            // Auto-convert DIVISLAB:NS to DIVISLAB.NS for Yahoo Finance compatibility
+            ticker = ticker.replace(':', '.');
+            document.getElementById('tickerInput').value = ticker;
+
+            const statusEl = document.getElementById('addStatus');
+            statusEl.textContent = "Fetching price...";
+            statusEl.className = "text-xs text-center text-yellow-400";
+
+            try {
+                // Using Yahoo Finance API (CORS-friendly in most cases, but has fallback)
+                const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+                const data = await response.json();
+                const price = data.chart.result[0].meta.regularMarketPrice;
+                
+                if (price) {
+                    document.getElementById('priceInput').value = price;
+                    statusEl.textContent = `Live price fetched: ${price}`;
+                    statusEl.className = "text-xs text-center text-green-400";
+                } else {
+                    throw new Error("No price data");
+                }
+            } catch (e) {
+                console.error(e);
+                statusEl.textContent = "Auto-fetch blocked (CORS). Please enter price manually.";
+                statusEl.className = "text-xs text-center text-red-400";
+                document.getElementById('priceInput').focus();
+            }
+        }
+
+        function addStock() {
+            const ticker = document.getElementById('tickerInput').value.trim().toUpperCase().replace(':', '.');
+            const qty = parseFloat(document.getElementById('qtyInput').value);
+            const price = parseFloat(document.getElementById('priceInput').value);
+
+            if (!ticker || !qty || !price) return alert("Please fill in all fields.");
+
+            const existing = portfolio.find(p => p.ticker === ticker);
+            if (existing) {
+                // Update average price
+                const totalCost = (existing.avgPrice * existing.qty) + (price * qty);
+                existing.qty += qty;
+                existing.avgPrice = totalCost / existing.qty;
+                existing.currentPrice = price; // Update to latest known price
+            } else {
+                portfolio.push({
+                    ticker: ticker,
+                    qty: qty,
+                    avgPrice: price,
+                    currentPrice: price,
+                    dateAdded: new Date().toISOString().split('T')[0]
+                });
+            }
+
+            // Clear inputs
+            document.getElementById('tickerInput').value = '';
+            document.getElementById('qtyInput').value = '1';
+            document.getElementById('priceInput').value = '';
+            document.getElementById('addStatus').textContent = "Added successfully!";
+            setTimeout(() => document.getElementById('addStatus').textContent = "", 2000);
+
+            updateUI();
+        }
+
+        function removeStock(ticker) {
+            if (confirm(`Remove ${ticker} from portfolio?`)) {
+                portfolio = portfolio.filter(p => p.ticker !== ticker);
+                updateUI();
+            }
+        }
+
+        function updateCurrentPrice(ticker) {
+            const newPrice = prompt(`Enter new current market price for ${ticker}:`);
+            if (newPrice && !isNaN(newPrice)) {
+                const stock = portfolio.find(p => p.ticker === ticker);
+                if (stock) {
+                    stock.currentPrice = parseFloat(newPrice);
+                    updateUI();
+                }
+            }
+        }
+
+        // --- UI & CHART UPDATES ---
+        function addHistorySnapshot() {
+            const totalVal = portfolio.reduce((sum, p) => sum + (p.qty * p.currentPrice), 0);
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Replace today's entry if it exists, otherwise push
+            const existingIdx = history.findIndex(h => h.date === today);
+            if (existingIdx >= 0) {
+                history[existingIdx].totalValue = totalVal;
+            } else {
+                history.push({ date: today, totalValue: totalVal });
+            }
+            
+            // Keep only last 30 days
+            if (history.length > 30) history = history.slice(-30);
+        }
+
+        function updateUI() {
+            const tbody = document.getElementById('holdingsTableBody');
+            tbody.innerHTML = '';
+            
+            let totalInvested = 0;
+            let totalCurrentValue = 0;
+
+            if (portfolio.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500 italic">No holdings yet. Add your first investment above.</td></tr>`;
+            }
+
+            portfolio.forEach(p => {
+                const invested = p.qty * p.avgPrice;
+                const currentVal = p.qty * p.currentPrice;
+                const pnl = currentVal - invested;
+                const pnlPct = ((pnl / invested) * 100).toFixed(2);
+                
+                totalInvested += invested;
+                totalCurrentValue += currentVal;
+
+                const pnlColor = pnl >= 0 ? 'text-green-400' : 'text-red-400';
+                const pnlSign = pnl >= 0 ? '+' : '';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/50 transition">
+                        <td class="px-4 py-3 font-bold text-white">${p.ticker}</td>
+                        <td class="px-4 py-3">${p.qty}</td>
+                        <td class="px-4 py-3 text-gray-400">₹${p.avgPrice.toFixed(2)}</td>
+                        <td class="px-4 py-3 text-white">₹${p.currentPrice.toFixed(2)}</td>
+                        <td class="px-4 py-3 font-semibold">₹${currentVal.toFixed(2)}</td>
+                        <td class="px-4 py-3 ${pnlColor}">${pnlSign}₹${pnl.toFixed(2)} (${pnlSign}${pnlPct}%)</td>
+                        <td class="px-4 py-3 text-right space-x-2">
+                            <button onclick="updateCurrentPrice('${p.ticker}')" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-white">Update Price</button>
+                            <button onclick="removeStock('${p.ticker}')" class="text-xs bg-red-900/50 hover:bg-red-900 text-red-300 px-2 py-1 rounded">Remove</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const totalPnL = totalCurrentValue - totalInvested;
+            const pnlColor = totalPnL >= 0 ? 'text-green-400' : 'text-red-400';
+            const pnlSign = totalPnL >= 0 ? '+' : '';
+
+            document.getElementById('totalInvested').textContent = `₹${totalInvested.toFixed(2)}`;
+            document.getElementById('totalValue').textContent = `₹${totalCurrentValue.toFixed(2)}`;
+            
+            const pnlEl = document.getElementById('totalPnL');
+            pnlEl.textContent = `${pnlSign}₹${totalPnL.toFixed(2)}`;
+            pnlEl.className = `text-xl font-bold ${pnlColor}`;
+
+            updateCharts();
+        }
+
+        function updateCharts() {
+            // 1. Allocation Pie Chart
+            const ctxPie = document.getElementById('allocationChart').getContext('2d');
+            const labels = portfolio.map(p => p.ticker);
+            const data = portfolio.map(p => p.qty * p.currentPrice);
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+
+            if (allocationChartInstance) allocationChartInstance.destroy();
+            allocationChartInstance = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: labels.length ? labels : ['No Data'],
+                    datasets: [{
+                        data: data.length ? data : [1],
+                        backgroundColor: data.length ? colors : ['#334155'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 11 } } }
+                    }
+                }
+            });
+
+            // 2. History Line Chart
+            const ctxLine = document.getElementById('historyChart').getContext('2d');
+            if (historyChartInstance) historyChartInstance.destroy();
+            historyChartInstance = new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: history.map(h => h.date),
+                    datasets: [{
+                        label: 'Portfolio Value',
+                        data: history.map(h => h.totalValue),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
